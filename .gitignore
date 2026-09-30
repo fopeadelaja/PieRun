@@ -144,5 +144,10 @@ vite.config.ts.timestamp-*
 
 # Claude File
 CLAUDE.md
-server/agents
+server/.agents
 server/skills-lock.json
+.agents/
+**/.claude/skills/
+.windsurf/
+skills-lock.json
+server/prisma/views/
