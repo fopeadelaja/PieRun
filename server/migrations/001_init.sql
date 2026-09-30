@@ -39,7 +39,7 @@ CREATE UNIQUE INDEX one_admin_only ON users ((TRUE)) WHERE is_admin;
 -- ----------------------------------------------------------------------------
 CREATE TABLE settings (
   id         BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),          -- R5 singleton trick
-  work_days  weekday[] NOT NULL CHECK (array_length(work_days,1) > 0),  -- T5
+  work_days  weekday[] NOT NULL CHECK (cardinality(work_days) > 0),      -- T5. NOT array_length: it returns NULL for {}, and NULL passes a CHECK
   cutoff     TIME NOT NULL DEFAULT '09:00',                        -- D-022
   timezone   TEXT NOT NULL DEFAULT 'Africa/Lagos',                 -- T7
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
