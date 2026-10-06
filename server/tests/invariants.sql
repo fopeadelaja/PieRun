@@ -34,21 +34,21 @@ BEGIN;
 -- ----------------------------------------------------------------------------
 \echo '## SETUP (no errors expected in this block)'
 
-INSERT INTO users (first_name, last_name, email, password_hash, is_admin)
-VALUES ('Setup', 'User',  'setup@pierun.test', 'x', FALSE),
-       ('Setup', 'Admin', 'admin@pierun.test', 'x', TRUE);
+INSERT INTO users (first_name, last_name, username, password_hash, is_admin)
+VALUES ('Setup', 'User',  'setup', 'x', FALSE),
+       ('Setup', 'Admin', 'admin', 'x', TRUE);
 
 INSERT INTO snacks (name, price) VALUES ('Setup Snack A', 100.00), ('Setup Snack B', 50.00);
 
 -- a PENDING order (estimate only, nothing frozen)
 INSERT INTO orders (user_id, estimated_total)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 200.00);
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 200.00);
 
 -- two ACCEPTED orders (totals frozen)
 INSERT INTO orders (user_id, status, estimated_total, total, fulfillment_date, accepted_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'),
+VALUES ((SELECT id FROM users WHERE username = 'setup'),
         'ACCEPTED', 200.00, 200.00, CURRENT_DATE, now()),
-       ((SELECT id FROM users WHERE email = 'setup@pierun.test'),
+       ((SELECT id FROM users WHERE username = 'setup'),
         'ACCEPTED', 500.00, 500.00, CURRENT_DATE, now());
 
 -- one item on the first accepted order, prices frozen
@@ -58,12 +58,12 @@ VALUES ((SELECT id FROM orders WHERE status = 'ACCEPTED' AND total = 200.00),
 
 -- a CONFIRMED payment of 200 and a CONFIRMED payment of 1000
 INSERT INTO payments (user_id, reported_amount, received_amount, status, confirmed_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 200.00,  200.00,  'CONFIRMED', now()),
-       ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 1000.00, 1000.00, 'CONFIRMED', now());
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 200.00,  200.00,  'CONFIRMED', now()),
+       ((SELECT id FROM users WHERE username = 'setup'), 1000.00, 1000.00, 'CONFIRMED', now());
 
 -- a PENDING_CONFIRMATION payment (nothing received yet)
 INSERT INTO payments (user_id, reported_amount)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00);
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00);
 
 -- 100 of the 200 payment applied to the 200 order
 INSERT INTO order_payments (order_id, payment_id, amount_applied)
@@ -77,25 +77,28 @@ SET CONSTRAINTS ALL IMMEDIATE;
 -- users
 -- ============================================================================
 \echo '## users: first_name must not be blank'
-INSERT INTO users (first_name, last_name, email, password_hash) VALUES ('', 'X', 'u1@pierun.test', 'x');
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('', 'X', 'u1', 'x');
 
 \echo '## users: first_name must not be whitespace only'
-INSERT INTO users (first_name, last_name, email, password_hash) VALUES ('   ', 'X', 'u2@pierun.test', 'x');
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('   ', 'X', 'u2', 'x');
 
 \echo '## users: last_name must not be blank'
-INSERT INTO users (first_name, last_name, email, password_hash) VALUES ('X', '', 'u3@pierun.test', 'x');
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', '', 'u3', 'x');
 
-\echo '## R8: email is unique'
-INSERT INTO users (first_name, last_name, email, password_hash) VALUES ('X', 'X', 'setup@pierun.test', 'x');
+\echo '## R8: username is unique'
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', 'X', 'setup', 'x');
+
+\echo '## R8: username is unique case-insensitively (SETUP vs setup)'
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', 'X', 'SETUP', 'x');
 
 \echo '## D-012: at most one admin'
-INSERT INTO users (first_name, last_name, email, password_hash, is_admin) VALUES ('X', 'X', 'admin2@pierun.test', 'x', TRUE);
+INSERT INTO users (first_name, last_name, username, password_hash, is_admin) VALUES ('X', 'X', 'admin2', 'x', TRUE);
 
 \echo '## D-012: cannot promote a second admin by UPDATE either'
-UPDATE users SET is_admin = TRUE WHERE email = 'setup@pierun.test';
+UPDATE users SET is_admin = TRUE WHERE username = 'setup';
 
 \echo '## R1: a user with orders cannot be deleted'
-DELETE FROM users WHERE email = 'setup@pierun.test';
+DELETE FROM users WHERE username = 'setup';
 
 -- ============================================================================
 -- settings
@@ -132,63 +135,63 @@ INSERT INTO orders (user_id, estimated_total) VALUES (999999999, 100.00);
 
 \echo '## S6: estimated_total must be positive'
 INSERT INTO orders (user_id, estimated_total)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 0);
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 0);
 
 \echo '## orders: frozen total must be positive'
 INSERT INTO orders (user_id, status, estimated_total, total, fulfillment_date, accepted_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 'ACCEPTED', 100.00, 0, CURRENT_DATE, now());
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 'ACCEPTED', 100.00, 0, CURRENT_DATE, now());
 
 \echo '## S5: PENDING order must not have a total'
 INSERT INTO orders (user_id, estimated_total, total)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00, 100.00);
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00, 100.00);
 
 \echo '## S5: ACCEPTED order must have a total'
 INSERT INTO orders (user_id, status, estimated_total, fulfillment_date, accepted_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 'ACCEPTED', 100.00, CURRENT_DATE, now());
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 'ACCEPTED', 100.00, CURRENT_DATE, now());
 
 \echo '## T1: PENDING order must not have a fulfillment_date'
 INSERT INTO orders (user_id, estimated_total, fulfillment_date)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00, CURRENT_DATE);
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00, CURRENT_DATE);
 
 \echo '## T1: ACCEPTED order must have a fulfillment_date'
 INSERT INTO orders (user_id, status, estimated_total, total, accepted_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 'ACCEPTED', 100.00, 100.00, now());
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 'ACCEPTED', 100.00, 100.00, now());
 
 \echo '## T3: PENDING order must not have accepted_at'
 INSERT INTO orders (user_id, estimated_total, accepted_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00, now());
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00, now());
 
 \echo '## T3: ACCEPTED order must have accepted_at'
 INSERT INTO orders (user_id, status, estimated_total, total, fulfillment_date)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 'ACCEPTED', 100.00, 100.00, CURRENT_DATE);
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 'ACCEPTED', 100.00, 100.00, CURRENT_DATE);
 
 \echo '## T3: REJECTED order must have rejected_at'
 INSERT INTO orders (user_id, status, estimated_total)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 'REJECTED', 100.00);
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 'REJECTED', 100.00);
 
 \echo '## T3: PENDING order must not have rejected_at'
 INSERT INTO orders (user_id, estimated_total, rejected_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00, now());
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00, now());
 
 \echo '## T3: CANCELLED order must have cancelled_at'
 INSERT INTO orders (user_id, status, estimated_total)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 'CANCELLED', 100.00);
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 'CANCELLED', 100.00);
 
 \echo '## T3: COMPLETED order must have completed_at'
 INSERT INTO orders (user_id, status, estimated_total, total, fulfillment_date, accepted_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 'COMPLETED', 100.00, 100.00, CURRENT_DATE, now());
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 'COMPLETED', 100.00, 100.00, CURRENT_DATE, now());
 
 \echo '## T3: ACCEPTED order must not have completed_at'
 INSERT INTO orders (user_id, status, estimated_total, total, fulfillment_date, accepted_at, completed_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 'ACCEPTED', 100.00, 100.00, CURRENT_DATE, now(), now());
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 'ACCEPTED', 100.00, 100.00, CURRENT_DATE, now(), now());
 
 \echo '## T4: accepted_at cannot precede created_at'
 INSERT INTO orders (user_id, status, estimated_total, total, fulfillment_date, accepted_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 'ACCEPTED', 100.00, 100.00, CURRENT_DATE, now() - interval '1 day');
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 'ACCEPTED', 100.00, 100.00, CURRENT_DATE, now() - interval '1 day');
 
 \echo '## T4: completed_at cannot precede accepted_at'
 INSERT INTO orders (user_id, status, estimated_total, total, fulfillment_date, accepted_at, completed_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 'COMPLETED', 100.00, 100.00, CURRENT_DATE, now(), now() - interval '1 hour');
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 'COMPLETED', 100.00, 100.00, CURRENT_DATE, now(), now() - interval '1 hour');
 
 \echo '## orders: an order with allocated payments cannot be deleted'
 DELETE FROM orders WHERE status = 'ACCEPTED' AND total = 200.00;
@@ -241,39 +244,39 @@ VALUES ((SELECT id FROM orders WHERE status = 'ACCEPTED' AND total = 500.00),
 -- ============================================================================
 \echo '## F9: reported_amount must be positive'
 INSERT INTO payments (user_id, reported_amount)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 0);
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 0);
 
 \echo '## F9: received_amount cannot be negative'
 INSERT INTO payments (user_id, reported_amount, received_amount, status, confirmed_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00, -1.00, 'CONFIRMED', now());
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00, -1.00, 'CONFIRMED', now());
 
 \echo '## P2 (NULL trap): CONFIRMED with received_amount NULL'
 INSERT INTO payments (user_id, reported_amount, received_amount, status, confirmed_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00, NULL, 'CONFIRMED', now());
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00, NULL, 'CONFIRMED', now());
 
 \echo '## P2: CONFIRMED with received_amount = 0'
 INSERT INTO payments (user_id, reported_amount, received_amount, status, confirmed_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00, 0, 'CONFIRMED', now());
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00, 0, 'CONFIRMED', now());
 
 \echo '## P2: CONFIRMED without confirmed_at'
 INSERT INTO payments (user_id, reported_amount, received_amount, status)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00, 100.00, 'CONFIRMED');
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00, 100.00, 'CONFIRMED');
 
 \echo '## P3: REJECTED with money received'
 INSERT INTO payments (user_id, reported_amount, received_amount, status)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00, 50.00, 'REJECTED');
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00, 50.00, 'REJECTED');
 
 \echo '## P3 (NULL trap): REJECTED with received_amount NULL'
 INSERT INTO payments (user_id, reported_amount, received_amount, status)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00, NULL, 'REJECTED');
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00, NULL, 'REJECTED');
 
 \echo '## P4: PENDING_CONFIRMATION with a received_amount'
 INSERT INTO payments (user_id, reported_amount, received_amount)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00, 100.00);
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00, 100.00);
 
 \echo '## P4: PENDING_CONFIRMATION with confirmed_at'
 INSERT INTO payments (user_id, reported_amount, confirmed_at)
-VALUES ((SELECT id FROM users WHERE email = 'setup@pierun.test'), 100.00, now());
+VALUES ((SELECT id FROM users WHERE username = 'setup'), 100.00, now());
 
 -- ============================================================================
 -- order_payments
@@ -313,12 +316,12 @@ VALUES ((SELECT id FROM orders   WHERE status = 'ACCEPTED' AND total = 500.00),
 \echo '## payment_amendments: reason must not be blank'
 INSERT INTO payment_amendments (payment_id, old_amount, new_amount, reason, amended_by)
 VALUES ((SELECT id FROM payments WHERE received_amount = 200.00), 200.00, 250.00, '   ',
-        (SELECT id FROM users WHERE email = 'admin@pierun.test'));
+        (SELECT id FROM users WHERE username = 'admin'));
 
 \echo '## payment_amendments: amount must actually change'
 INSERT INTO payment_amendments (payment_id, old_amount, new_amount, reason, amended_by)
 VALUES ((SELECT id FROM payments WHERE received_amount = 200.00), 200.00, 200.00, 'typo',
-        (SELECT id FROM users WHERE email = 'admin@pierun.test'));
+        (SELECT id FROM users WHERE username = 'admin'));
 
 \echo '## payment_amendments: amended_by must be an existing user'
 INSERT INTO payment_amendments (payment_id, old_amount, new_amount, reason, amended_by)
