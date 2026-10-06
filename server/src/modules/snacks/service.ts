@@ -1,13 +1,8 @@
+import type { Snack } from "../../../../shared/types.js";
 import prisma from "../../db.js";
 import { getAllSnacks } from "./repo.js";
 
-type snack = {
-  id: string;
-  name: string;
-  price: string;
-};
-
-export async function getSnacks(): Promise<snack[]> {
+export async function getSnacks(): Promise<Snack[]> {
   const snacks = await getAllSnacks(prisma);
   return snacks
     .filter((row) => row.is_available && !row.is_retired)
