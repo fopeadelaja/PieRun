@@ -20,6 +20,7 @@ export function createUser(db: Db, user: NewUser) {
       last_name: user.lastName,
     },
     select: {
+      id: true,
       username: true,
       first_name: true,
       last_name: true,
