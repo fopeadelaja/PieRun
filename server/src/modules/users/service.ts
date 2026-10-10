@@ -1,9 +1,10 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import type { User } from "../../../../shared/types.js";
+import { Prisma } from "../../../generated/prisma/client.js";
 import prisma from "../../db.js";
 import { createUser, findByUsername } from "./repo.js";
-import { UnauthorizedError } from "../../errors.js";
+import { ConflictError, UnauthorizedError } from "../../errors.js";
 
 const BCRYPT_COST = 10;
 const JWT_SECRET =
@@ -25,8 +26,6 @@ function normaliseUsername(username: string): string {
   return username.trim().toLowerCase();
 }
 
-// The row as the repo returns it (shaped by its `select`). Derived rather
-// than written out so it stays correct when the select changes.
 type UserRow = {
   id: bigint;
   username: string;
@@ -47,16 +46,29 @@ function toUser(row: UserRow): User {
 }
 
 export async function registerUser(input: RegisterInput): Promise<User> {
+  const username = normaliseUsername(input.username);
   const passwordHash = await bcrypt.hash(input.password, BCRYPT_COST);
 
-  const row = await createUser(prisma, {
-    username: normaliseUsername(input.username),
-    passwordHash,
-    firstName: input.firstName.trim(),
-    lastName: input.lastName.trim(),
-  });
-
-  return toUser(row);
+  // No check-then-insert: two concurrent registrations would both pass the
+  // check. The unique index on lower(username) is the only atomic guard, so
+  // let it decide and translate its violation into a domain error.
+  try {
+    const row = await createUser(prisma, {
+      username,
+      passwordHash,
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+    });
+    return toUser(row);
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      throw new ConflictError("Username already taken");
+    }
+    throw err;
+  }
 }
 
 export async function loginUser(username: string, password: string) {
