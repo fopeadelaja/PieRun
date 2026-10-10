@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import type { User } from "../../../../shared/types.js";
 import prisma from "../../db.js";
 import { createUser, findByUsername } from "./repo.js";
 import { UnauthorizedError } from "../../errors.js";
@@ -24,15 +25,38 @@ function normaliseUsername(username: string): string {
   return username.trim().toLowerCase();
 }
 
-export async function registerUser(input: RegisterInput) {
+// The row as the repo returns it (shaped by its `select`). Derived rather
+// than written out so it stays correct when the select changes.
+type UserRow = {
+  id: bigint;
+  username: string;
+  first_name: string;
+  last_name: string;
+  is_admin: boolean;
+};
+
+// Row → wire shape. BigInt id becomes a string; snake_case becomes camelCase.
+function toUser(row: UserRow): User {
+  return {
+    id: row.id.toString(),
+    username: row.username,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    isAdmin: row.is_admin,
+  };
+}
+
+export async function registerUser(input: RegisterInput): Promise<User> {
   const passwordHash = await bcrypt.hash(input.password, BCRYPT_COST);
 
-  return createUser(prisma, {
+  const row = await createUser(prisma, {
     username: normaliseUsername(input.username),
     passwordHash,
     firstName: input.firstName.trim(),
     lastName: input.lastName.trim(),
   });
+
+  return toUser(row);
 }
 
 export async function loginUser(username: string, password: string) {

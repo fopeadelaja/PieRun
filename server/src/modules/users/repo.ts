@@ -24,6 +24,7 @@ export function createUser(db: Db, user: NewUser) {
       username: true,
       first_name: true,
       last_name: true,
+      is_admin: true,
     },
   });
 }
