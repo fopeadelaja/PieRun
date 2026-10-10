@@ -14,3 +14,11 @@ export type Snack = {
   name: string;
   price: string;
 };
+
+export type User = {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  isAdmin: boolean;
+};
