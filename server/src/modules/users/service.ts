@@ -1,10 +1,21 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import type { User } from "../../../../shared/types.js";
+import {
+  NAME_RE,
+  NAME_RULE,
+  USERNAME_MIN_LENGTH,
+  USERNAME_RE,
+  USERNAME_RULE,
+} from "../../../../shared/validation.js";
 import { Prisma } from "../../../generated/prisma/client.js";
 import prisma from "../../db.js";
 import { createUser, findByUsername } from "./repo.js";
-import { ConflictError, UnauthorizedError } from "../../errors.js";
+import {
+  ConflictError,
+  UnauthorizedError,
+  ValidationError,
+} from "../../errors.js";
 
 const BCRYPT_COST = 10;
 const JWT_SECRET =
@@ -45,8 +56,36 @@ function toUser(row: UserRow): User {
   };
 }
 
+// Domain rules for a new account. These live here, not in the route, so
+// every caller (route, seed script, test) gets the same rules. The CHECK
+// constraints in 003_name_format.sql are the guard behind them.
+function validateRegistration(input: {
+  username: string;
+  firstName: string;
+  lastName: string;
+}): void {
+  if (input.username.length < USERNAME_MIN_LENGTH) {
+    throw new ValidationError(
+      `username must be at least ${USERNAME_MIN_LENGTH} characters`,
+    );
+  }
+  if (!USERNAME_RE.test(input.username)) {
+    throw new ValidationError(`username: ${USERNAME_RULE}`);
+  }
+  if (!NAME_RE.test(input.firstName)) {
+    throw new ValidationError(`firstName: ${NAME_RULE}`);
+  }
+  if (!NAME_RE.test(input.lastName)) {
+    throw new ValidationError(`lastName: ${NAME_RULE}`);
+  }
+}
+
 export async function registerUser(input: RegisterInput): Promise<User> {
   const username = normaliseUsername(input.username);
+  const firstName = input.firstName.trim();
+  const lastName = input.lastName.trim();
+  validateRegistration({ username, firstName, lastName });
+
   const passwordHash = await bcrypt.hash(input.password, BCRYPT_COST);
 
   // No check-then-insert: two concurrent registrations would both pass the
@@ -56,8 +95,8 @@ export async function registerUser(input: RegisterInput): Promise<User> {
     const row = await createUser(prisma, {
       username,
       passwordHash,
-      firstName: input.firstName.trim(),
-      lastName: input.lastName.trim(),
+      firstName,
+      lastName,
     });
     return toUser(row);
   } catch (err) {

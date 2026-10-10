@@ -24,11 +24,14 @@ export class NotFoundError extends Error {
     this.name = "NotFoundError";
   }
 }
-export class BadRequestError extends Error {
+
+// Input that fails a domain rule (format, range, required). Thrown by routes
+// for shape problems and by services for rule problems; both are a 400.
+export class ValidationError extends Error {
   status = 400;
 
-  constructor(message = "Bad Request") {
+  constructor(message = "Invalid input") {
     super(message);
-    this.name = "BadRequestError";
+    this.name = "ValidationError";
   }
 }
