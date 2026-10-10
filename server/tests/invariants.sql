@@ -77,19 +77,46 @@ SET CONSTRAINTS ALL IMMEDIATE;
 -- users
 -- ============================================================================
 \echo '## users: first_name must not be blank'
-INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('', 'X', 'u1', 'x');
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('', 'X', 'user1', 'x');
 
 \echo '## users: first_name must not be whitespace only'
-INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('   ', 'X', 'u2', 'x');
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('   ', 'X', 'user2', 'x');
 
 \echo '## users: last_name must not be blank'
-INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', '', 'u3', 'x');
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', '', 'user3', 'x');
 
 \echo '## R8: username is unique'
 INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', 'X', 'setup', 'x');
 
 \echo '## R8: username is unique case-insensitively (SETUP vs setup)'
 INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', 'X', 'SETUP', 'x');
+
+\echo '## R8a: username must be at least 3 characters'
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', 'X', 'ab', 'x');
+
+\echo '## R8a: username may not start with a separator'
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', 'X', '.fope', 'x');
+
+\echo '## R8a: username may not end with a separator'
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', 'X', 'fope_', 'x');
+
+\echo '## R8a: username may not have consecutive separators'
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', 'X', 'fo..pe', 'x');
+
+\echo '## R8a: username may not contain other symbols'
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', 'X', 'fope$', 'x');
+
+\echo '## R8b: first_name may not contain symbols'
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('Fope$', 'X', 'fmt1', 'x');
+
+\echo '## R8b: first_name may not have a double space'
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('Mary  Ann', 'X', 'fmt2', 'x');
+
+\echo '## R8b: last_name may not start with a hyphen'
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', '-Fope', 'fmt3', 'x');
+
+\echo '## R8b: last_name may not contain digits'
+INSERT INTO users (first_name, last_name, username, password_hash) VALUES ('X', 'Fope1', 'fmt4', 'x');
 
 \echo '## D-012: at most one admin'
 INSERT INTO users (first_name, last_name, username, password_hash, is_admin) VALUES ('X', 'X', 'admin2', 'x', TRUE);
