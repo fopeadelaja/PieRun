@@ -1,7 +1,8 @@
 import { Router } from "express";
 import type { ApiResponse, User } from "../../../../shared/types.js";
 import { ValidationError } from "../../errors.js";
-import { registerUser, loginUser } from "./service.js";
+import { requireAuth } from "../../middleware/auth.js";
+import { getUserById, registerUser, loginUser } from "./service.js";
 
 const router = Router();
 
@@ -33,6 +34,19 @@ router.post("/login", async (req, res) => {
     requireString(req.body, "password"),
   );
   res.cookie("token", token, { httpOnly: true, sameSite: "lax" });
+  res.sendStatus(204);
+});
+
+// First protected route. requireAuth runs before the handler and either
+// sets req.user or throws 401; the handler never sees an anonymous request.
+router.get("/me", requireAuth, async (req, res) => {
+  const user = await getUserById(req.user!.userId);
+  const body: ApiResponse<User> = { data: user };
+  res.json(body);
+});
+
+router.post("/logout", (_req, res) => {
+  res.clearCookie("token");
   res.sendStatus(204);
 });
 

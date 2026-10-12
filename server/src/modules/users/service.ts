@@ -9,20 +9,17 @@ import {
   USERNAME_RULE,
 } from "../../../../shared/validation.js";
 import { Prisma } from "../../../generated/prisma/client.js";
+import { JWT_SECRET } from "../../config.js";
 import prisma from "../../db.js";
-import { createUser, findByUsername } from "./repo.js";
+import { createUser, findById, findByUsername } from "./repo.js";
 import {
   ConflictError,
+  NotFoundError,
   UnauthorizedError,
   ValidationError,
 } from "../../errors.js";
 
 const BCRYPT_COST = 10;
-const JWT_SECRET =
-  process.env.JWT_SECRET ??
-  (() => {
-    throw new Error("JWT_SECRET is not set");
-  })();
 
 type RegisterInput = {
   username: string;
@@ -128,4 +125,12 @@ export async function loginUser(username: string, password: string) {
       expiresIn: "7d",
     },
   );
+}
+
+// Ids are strings on the wire and bigint in the database; the conversion
+// happens here, at the edge of the module, in one place.
+export async function getUserById(id: string): Promise<User> {
+  const row = await findById(prisma, BigInt(id));
+  if (!row) throw new NotFoundError("User not found");
+  return toUser(row);
 }
