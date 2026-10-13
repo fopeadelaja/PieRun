@@ -26,3 +26,10 @@ export function createOrder(db: Db, order: NewOrder) {
     },
   });
 }
+
+export function findByIdForUser(db: Db, orderId: bigint, userId: bigint) {
+  return db.orders.findFirst({
+    where: { id: orderId, user_id: userId },
+    include: { order_items: true },
+  });
+}
