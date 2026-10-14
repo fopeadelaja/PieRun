@@ -79,3 +79,12 @@ export async function setItemPrices(
     ),
   );
 }
+
+export function deleteItems(db: Db, orderId: bigint, snackIds: bigint[]) {
+  return db.order_items.deleteMany({
+    where: {
+      order_id: orderId,
+      snack_id: { in: snackIds },
+    },
+  });
+}
