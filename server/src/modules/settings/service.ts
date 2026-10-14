@@ -15,7 +15,10 @@ export async function getSettings(db: Db): Promise<FulfillmentSettings> {
   // clock part is meaningful.
   return {
     workDays: row.work_days,
-    cutoff: { hour: row.cutoff.getUTCHours(), minute: row.cutoff.getUTCMinutes() },
+    cutoff: {
+      hour: row.cutoff.getUTCHours(),
+      minute: row.cutoff.getUTCMinutes(),
+    },
     timezone: row.timezone,
   };
 }

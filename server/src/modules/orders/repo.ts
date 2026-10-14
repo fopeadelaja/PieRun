@@ -1,4 +1,5 @@
 import { Prisma } from "../../../generated/prisma/client.js";
+import type { Decimal } from "../../../generated/prisma/internal/prismaNamespace.js";
 import type { Db } from "../../db.js";
 
 type AcceptData = {
@@ -55,4 +56,26 @@ export async function acceptIfPending(
     },
   });
   return result.count;
+}
+
+export async function setItemPrices(
+  db: Db,
+  prices: {
+    orderId: bigint;
+    snackId: bigint;
+    price: Prisma.Decimal;
+    total: Prisma.Decimal;
+  }[],
+) {
+  // One update per line; each row is addressed by its compound key.
+  return Promise.all(
+    prices.map((p) =>
+      db.order_items.update({
+        where: {
+          order_id_snack_id: { order_id: p.orderId, snack_id: p.snackId },
+        },
+        data: { price: p.price, total: p.total },
+      }),
+    ),
+  );
 }
