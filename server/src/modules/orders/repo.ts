@@ -23,14 +23,13 @@ export function createOrder(db: Db, order: NewOrder) {
       user_id: order.userId,
       estimated_total: order.estimatedTotal,
       order_items: {
-        create: [
-          ...order.items.map((item) => ({
-            snack_id: item.snackId,
-            quantity: item.quantity,
-          })),
-        ],
+        create: order.items.map((item) => ({
+          snack_id: item.snackId,
+          quantity: item.quantity,
+        })),
       },
     },
+    include: { order_items: true },
   });
 }
 
